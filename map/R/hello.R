@@ -1,0 +1,60 @@
+library(tidyverse)
+library(ggplot2)
+library(sf)
+library(sp)
+library(maps)
+library(OpenStreetMap)
+library(GISTools)
+library(tmap)
+check_pkg <- function(x)
+{
+  if (!require(x, character.only = TRUE))
+  {
+    install.packages(x, dep = TRUE)
+    if(!require(x, character.only = TRUE)) stop("Package not found")
+  }
+}
+
+check_pkg("sf")
+check_pkg("httr")
+
+check_pkg("cluster")
+check_pkg("dbscan")
+check_pkg("fpc")
+check_pkg("seriation")
+check_pkg("mlbench")
+check_pkg("spatgraphs")
+check_pkg("rjson")
+
+utils::data(ruspini, package = "cluster")
+base::plot(ruspini, cex = 0.5, asp = 1)
+ruspini <- base::scale(ruspini, scale = TRUE, center = FALSE)
+base::plot(ruspini, cex = 0.5, asp = 1)
+require(dbscan)
+
+dbscan::kNNdistplot(ruspini, k = 3)
+graphics::abline(h = 0.2, col = "red")
+db <- dbscan::dbscan(ruspini, eps = 0.2, minPts = 3)
+base::plot(ruspini, pch = 19, cex = 0.5, col = db$cluster + 1, asp = 1)
+lof <- dbscan::lof(ruspini, minPts = 3)
+base::plot(ruspini, pch = ".", main = "LOF (k = 3)", asp = 1)
+graphics::points(ruspini, cex = (lof - 1.0) * 3, pch = 1, col = "red")
+d <- stats::dist(ruspini)
+seriation::dissplot(d, labels = db$cluster, options = list(main = "DBSCAN"))
+
+smiley <- mlbench::mlbench.smiley(n = 500, sd1 = 0.1, sd2 = 0.05)
+base::plot(smiley, cex = 0.4, asp = 1)
+ruspi_reach <- dbscan::optics(ruspini, eps = 2.0, minPts = 10)
+ruspi_reach <- dbscan::extractDBSCAN(ruspi_reach, eps_cl = 0.25)
+plot(ruspini, cex = 0.4, pch = 19, col = ruspi_reach$cluster + 1, asp = 1)
+ruspi_reach <- dbscan::optics(ruspini, eps = 1.0, minPts = 4)
+ruspi_reach <- dbscan::extractDBSCAN(ruspi_reach, eps_cl = 0.25)
+plot(ruspini, cex = 0.4, pch = 19, col = ruspi_reach$cluster + 1, asp = 1)
+n <- 100
+set.seed(99)  # make sure the seed is always initialized the same
+pp2d <- list(x = runif(n), y = runif(n), n = n, window = list(x = c(0,1),y = c(0,1)))
+mst <- spatgraphs::spatgraph(pp2d, "MST")
+plot(pp2d, asp = 1, cex = 0.6, pch = 19, col = 2, main = "Minimum Spanning Tree (RST)")
+plot(data = mst, pp2d, add = TRUE)
+result <- fromJSON(file = "https://data.stadt-zuerich.ch/dataset/sid_dav_strassenverkehrsunfallorte/download/RoadTrafficAccidentLocations.json")
+print(result)
